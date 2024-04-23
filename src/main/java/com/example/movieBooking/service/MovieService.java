@@ -11,6 +11,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class MovieService {
+
     private final MovieRepository movieRepository;
 
     public List<Movie> getAllMovies() {
@@ -23,30 +24,36 @@ public class MovieService {
     }
 
     public Movie addMovie(Movie movie) {
-        if (movie == null || movie.getTitle() == null || movie.getTitle().isEmpty()) {
-            throw new IllegalArgumentException("Movie cannot be empty");
-        }
-        if (movie.getDurationMinutes() < 1) {
-            throw new IllegalArgumentException("Movie duration must be at least 1 minute");
-        }
-        if (movieRepository.findByTitle(movie.getTitle()).isPresent()) {
-            throw new IllegalArgumentException("Movie already exists");
-        }
+        validateMovie(movie);
+        checkIfMovieExists(movie.getTitle());
+
         return movieRepository.save(movie);
     }
 
     public Movie updateMovie(Long id, Movie movie) {
-        if (!movieRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Movie not found");
-        }
-        movie.setId(id);
+        Movie existingMovie = getMovieById(id);
+        movie.setId(existingMovie.getId());
         return movieRepository.save(movie);
     }
 
     public void deleteMovie(Long id) {
-        if (!movieRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Movie not found");
-        }
+        getMovieById(id);
         movieRepository.deleteById(id);
+    }
+
+    private void validateMovie(Movie movie) {
+        if (movie == null || movie.getTitle() == null || movie.getTitle().isEmpty()) {
+            throw new IllegalArgumentException("Movie title cannot be empty");
+        }
+        if (movie.getDurationMinutes() < 1) {
+            throw new IllegalArgumentException("Movie duration must be at least 1 minute");
+        }
+    }
+
+    private void checkIfMovieExists(String title) {
+        movieRepository.findByTitle(title)
+                .ifPresent(m -> {
+                    throw new IllegalArgumentException("Movie with title '" + title + "' already exists");
+                });
     }
 }
